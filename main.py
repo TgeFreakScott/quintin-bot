@@ -127,4 +127,35 @@ async def askquintin(interaction: discord.Interaction, prompt: str):
         traceback.print_exc()
         await interaction.followup.send(f"❌ Quintin dropped his mug: `{e}`")
 
+@bot.tree.command(name="sing", description="Ask Quintin to sing a tavern song.")
+async def sing(interaction: discord.Interaction):
+    from discord import File
+
+    # Restrict to one channel
+    if interaction.channel.id != DISCORD_CHANNEL_ID:
+        await interaction.response.send_message(
+            "Quintin grumbles, 'I only sing in the tavern, friend.'",
+            ephemeral=True
+        )
+        return
+
+    song_folder = "assets"
+    song_files = [f for f in os.listdir(song_folder) if f.endswith(('.mp3', '.wav'))]
+
+    if not song_files:
+        await interaction.response.send_message(
+            "Quintin scratches his head. 'I seem to have lost my voice... no songs in the ledger!'"
+        )
+        return
+
+    chosen_song = random.choice(song_files)
+    file_path = os.path.join(song_folder, chosen_song)
+    song_title = os.path.splitext(chosen_song)[0].replace("_", " ").title()
+
+    await interaction.response.send_message(
+        content=f"*Quintin clears his throat and begins to sing:* 🎵 **{song_title}**",
+        file=File(file_path)
+    )
+
+
 bot.run(DISCORD_TOKEN)
