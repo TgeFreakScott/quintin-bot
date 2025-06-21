@@ -70,10 +70,10 @@ async def tavern_ambience():
 @bot.event
 async def on_ready():
     try:
-        scheduler.start()
-        guild = discord.Object(id=GUILD_ID)
-        synced = await bot.tree.sync(guild=guild)
-        print(f"🍻 Quintin is behind the bar. Synced {len(synced)} commands to guild {GUILD_ID}. Logged in as {bot.user}")
+        guild = discord.Object(id=1383828857827758151)  # your GUILD_ID
+        bot.tree.clear_commands(guild=guild)  # clear old cached commands
+        await bot.tree.sync(guild=guild)  # force re-sync for this guild
+        print(f"🍻 Quintin is behind the bar. Slash commands force-synced. Logged in as {bot.user}")
     except Exception as e:
         print(f"❌ Failed to sync commands: {e}")
 
@@ -150,6 +150,11 @@ async def sing(interaction: discord.Interaction):
         content=f"*Quintin clears his throat and begins to sing:* 🎵 **{song_title}**",
         file=File(file_path)
     )
-
+    
+@bot.tree.command(name="listcommands", description="Lists all registered commands.", guild=discord.Object(id=1383828857827758151))
+async def list_commands(interaction: discord.Interaction):
+    cmds = [cmd.name for cmd in bot.tree.get_commands()]
+    await interaction.response.send_message(f"Registered commands: {', '.join(cmds)}")
+    
 # 🔹 Run the bot
 bot.run(DISCORD_TOKEN)
