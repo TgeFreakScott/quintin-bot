@@ -37,6 +37,7 @@ load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 DISCORD_CHANNEL_ID = 1385397409550565566  # Your fixed channel
+GUILD_ID = 1383828857827758151  # Your server ID
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
@@ -70,8 +71,9 @@ async def tavern_ambience():
 async def on_ready():
     try:
         scheduler.start()
-        synced = await bot.tree.sync()
-        print(f"🍻 Quintin is behind the bar. Synced {len(synced)} commands. Logged in as {bot.user}")
+        guild = discord.Object(id=GUILD_ID)
+        synced = await bot.tree.sync(guild=guild)
+        print(f"🍻 Quintin is behind the bar. Synced {len(synced)} commands to guild {GUILD_ID}. Logged in as {bot.user}")
     except Exception as e:
         print(f"❌ Failed to sync commands: {e}")
 
@@ -132,7 +134,7 @@ async def sing(interaction: discord.Interaction):
         return
 
     song_folder = "assets"
-    song_files = [f for f in os.listdir(song_folder) if f.endswith(('.mp3', '.wav'))]
+    song_files = [f for f in os.listdir(song_folder) if f.endswith((".mp3", ".wav"))]
 
     if not song_files:
         await interaction.response.send_message(
