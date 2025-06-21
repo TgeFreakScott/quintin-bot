@@ -158,6 +158,8 @@ async def list_commands(interaction: discord.Interaction):
     cmds = [cmd.name for cmd in bot.tree.get_commands(guild=discord.Object(id=GUILD_ID))]
     await interaction.response.send_message(f"Registered commands: {', '.join(cmds)}")
 
+from bs4 import BeautifulSoup  # Make sure this is in your imports
+
 @bot.tree.command(name="who", description="Ask Quintin about someone from the world.")
 async def who(interaction: discord.Interaction, name: str):
     if interaction.channel.id != DISCORD_CHANNEL_ID:
@@ -169,13 +171,33 @@ async def who(interaction: discord.Interaction, name: str):
 
     await interaction.response.defer()
 
-    name_key = name.lower()
-    lore = fetch_lore_from_index(name_key)
+    try:
+        name_key = name.lower()
+        if name_key in LORE_INDEX:
+            url = LORE_INDEX[name_key]
+            response = requests.get(url)
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.text, "html.parser")
+                content_text = soup.get_text(separator="\n").strip()
+                paragraphs = [p.strip() for p in content_text.split("\n") if len(p.strip()) > 50]
 
-    if lore.startswith("("):  # Not found or error
-        lore = f"Quintin scratches his beard. 'Can't say I know much about {name.title()}, but the name rings a bell...'"
+                if not paragraphs:
+                    lore = f"Quintin flips through the ledger. 'Strange, nothing here on {name.title()}.'"
+                else:
+                    snippet = "\n\n".join(random.sample(paragraphs, min(2, len(paragraphs))))
+                    lore = f"**About {name.title()}**\n{snippet[:2000]}"
+            else:
+                lore = f"Quintin frowns. 'Trouble finding the records for {name.title()} – the ledger gave me a {response.status_code} error.'"
+        else:
+            lore = f"Quintin scratches his beard. 'Can’t say I know much about {name.title()}, but the name rings a bell…'"
 
-    await interaction.followup.send(f"**About {name.title()}**\n{lore}")
+        await interaction.followup.send(lore)
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        await interaction.followup.send(f"❌ Quintin dropped the ledger: `{e}`")
+
 
 @bot.tree.command(name="rumour", description="Quintin shares a whispered rumour from the tavern.")
 async def rumour(interaction: discord.Interaction):
@@ -329,32 +351,6 @@ async def menu(interaction: discord.Interaction, item: str):
         )
 
     await interaction.followup.send(reply)
-
-@bot.tree.command(name="order", description="Tell Quintin what you'd like to order.")
-@app_commands.describe(item="Type what you'd like to order (or say 'random' or 'surprise me').")
-async def order(interaction: discord.Interaction, item: str):
-    item_key = item.lower().strip()
-    full_menu = {**food_menu, **drink_menu}
-
-    # Handle special cases for randomised orders
-    if item_key in ["random", "surprise me", "surprise", "anything", "something good"]:
-        item_key = random.choice(list(full_menu.keys()))
-
-    if item_key in full_menu:
-        flavour_lines = [
-            f"Quintin wipes his hands on his apron and slides a plate of **{item_key}** your way.",
-            f"With a grunt, Quintin grabs a serving of **{item_key}** and sets it on the bar.",
-            f"*'One {item_key}, coming right up!'* Quintin says with a smirk.",
-            f"Quintin whistles a tune while fetching **{item_key}** for you.",
-            f"Without a word, Quintin places a **{item_key}** in front of you, eyes twinkling."
-        ]
-        flavour = random.choice(flavour_lines)
-        await interaction.response.send_message(f"{flavour}\n*{full_menu[item_key]}*")
-    else:
-        await interaction.response.send_message(
-            f"Quintin raises an eyebrow. *'We don't serve that, friend. Try something from the /menu.'*",
-            ephemeral=True
-        )
 
 @bot.tree.command(name="gossip", description="Quintin shares some juicy, fresh tavern gossip.")
 async def gossip(interaction: discord.Interaction):
