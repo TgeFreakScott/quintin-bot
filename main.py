@@ -36,8 +36,8 @@ def fetch_lore_from_index(topic: str) -> str:
 load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-DISCORD_CHANNEL_ID = 1385397409550565566  # Your fixed channel
-GUILD_ID = 1383828857827758151  # Your server ID
+DISCORD_CHANNEL_ID = 1385397409550565566
+GUILD_ID = 1383828857827758151
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
@@ -66,19 +66,17 @@ async def tavern_ambience():
     if channel:
         await channel.send(random.choice(status_messages))
 
-# 🔹 On Ready
 @bot.event
 async def on_ready():
     try:
-        guild = discord.Object(id=1383828857827758151)  # your GUILD_ID
-        bot.tree.clear_commands(guild=guild)  # clear old cached commands
-        await bot.tree.sync(guild=guild)  # force re-sync for this guild
+        guild = discord.Object(id=GUILD_ID)
+        bot.tree.clear_commands(guild=guild)
+        await bot.tree.sync(guild=guild)
         print(f"🍻 Quintin is behind the bar. Slash commands force-synced. Logged in as {bot.user}")
     except Exception as e:
         print(f"❌ Failed to sync commands: {e}")
 
-# 🔹 Ask Quintin
-@bot.tree.command(name="askquintin", description="Ask Quintin, the barkeep, anything.")
+@bot.tree.command(name="askquintin", description="Ask Quintin, the barkeep, anything.", guild=discord.Object(id=GUILD_ID))
 async def askquintin(interaction: discord.Interaction, prompt: str):
     try:
         if interaction.channel.id != DISCORD_CHANNEL_ID:
@@ -93,7 +91,7 @@ async def askquintin(interaction: discord.Interaction, prompt: str):
         topic_guess = next((word for word in prompt.lower().split() if word in LORE_INDEX), "")
         lore = fetch_lore_from_index(topic_guess) if topic_guess else ""
 
-        if lore.startswith("("):  # fallback
+        if lore.startswith("("):
             lore = (
                 f"Rumour has it, no one really knows the full story of {topic_guess.capitalize()}, "
                 f"but the tavern regulars whisper they once did something truly legendary..."
@@ -123,8 +121,7 @@ async def askquintin(interaction: discord.Interaction, prompt: str):
         traceback.print_exc()
         await interaction.followup.send(f"❌ Quintin dropped his mug: `{e}`")
 
-# 🔹 Sing command
-@bot.tree.command(name="sing", description="Ask Quintin to sing a tavern song.")
+@bot.tree.command(name="sing", description="Ask Quintin to sing a tavern song.", guild=discord.Object(id=GUILD_ID))
 async def sing(interaction: discord.Interaction):
     if interaction.channel.id != DISCORD_CHANNEL_ID:
         await interaction.response.send_message(
@@ -150,11 +147,11 @@ async def sing(interaction: discord.Interaction):
         content=f"*Quintin clears his throat and begins to sing:* 🎵 **{song_title}**",
         file=File(file_path)
     )
-    
-@bot.tree.command(name="listcommands", description="Lists all registered commands.", guild=discord.Object(id=1383828857827758151))
+
+@bot.tree.command(name="listcommands", description="Lists all registered commands.", guild=discord.Object(id=GUILD_ID))
 async def list_commands(interaction: discord.Interaction):
-    cmds = [cmd.name for cmd in bot.tree.get_commands()]
+    cmds = [cmd.name for cmd in bot.tree.get_commands(guild=discord.Object(id=GUILD_ID))]
     await interaction.response.send_message(f"Registered commands: {', '.join(cmds)}")
-    
+
 # 🔹 Run the bot
 bot.run(DISCORD_TOKEN)
