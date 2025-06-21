@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 import json
 import requests
 import random
+from keep_alive import keep_alive
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 keep_alive()
