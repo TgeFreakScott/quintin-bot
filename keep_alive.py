@@ -1,11 +1,16 @@
-from flask import Flask, Response
+from flask import Flask
+from threading import Thread
 
-app = Flask(__name__)
+app = Flask('')
 
 @app.route('/')
-def index():
-    return Response("Quintin is alive, stew's on.", mimetype='text/plain')
+def home():
+    return "Quintin is alive, stew's on."
 
-# Required for Vercel
-def handler(request):
-    return app(request.environ, lambda status, headers: (status, headers, []))
+def run():
+    app.run(host='0.0.0.0', port=8080)
+
+def keep_alive():
+    t = Thread(target=run)
+    t.daemon = True
+    t.start()
