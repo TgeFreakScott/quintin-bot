@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "api/keep_alive.py": {
+      "runtime": "python3.11"
+    }
+  },
+  "routes": [
+    { "src": "/api/keep_alive", "dest": "api/keep_alive.py" }
+  ]
+}

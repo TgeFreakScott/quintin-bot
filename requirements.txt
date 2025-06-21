@@ -1,0 +1,6 @@
+flask
+discord.py
+openai
+apscheduler
+python-dotenv
+requests
