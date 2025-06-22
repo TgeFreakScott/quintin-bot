@@ -105,7 +105,7 @@ status_messages = [
     "*Quintin lights a lantern, then lowers its flame to a soft glow.*"
 ]
 
-@scheduler.scheduled_job("interval", minutes=30)
+@scheduler.scheduled_job("interval", minutes=60)
 async def tavern_ambience():
     channel = bot.get_channel(DISCORD_CHANNEL_ID)
     if channel:

@@ -4,4 +4,4 @@ class handler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b"Quintin is alive. The stew smells good.")
+        self.wfile.write(b"Quintin is alive, Stew is cooking.")
