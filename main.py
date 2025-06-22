@@ -58,7 +58,7 @@ status_messages = [
     "*Quintin sharpens a blade behind the bar, just in case.*",
     "*Quintin tacks a new rumour to the noticeboard.*",
     "*Quintin peers out the window, watching the sky.*",
-        "*Quintin wipes down the bar with a rag that’s seen better days.*",
+    "*Quintin wipes down the bar with a rag that’s seen better days.*",
     "*Quintin carefully counts coins behind the bar.*",
     "*Quintin rearranges bottles on the shelf by height, then by colour.*",
     "*Quintin steps outside and brings in a small crate of root vegetables.*",
