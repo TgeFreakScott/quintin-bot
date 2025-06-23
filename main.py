@@ -115,13 +115,19 @@ async def tavern_ambience():
 @bot.event
 async def on_ready():
     try:
-        guild = discord.Object(id=GUILD_ID)
-        bot.tree.copy_global_to(guild=guild)  # Optional: copy global to guild
-        await bot.tree.sync(guild=guild)
-        scheduler.start()
-        print(f"🍻 Quintin is behind the bar. Synced to guild {GUILD_ID}.")
+        guild = discord.Object(id=YOUR_GUILD_ID)
+
+        # Clear both global and guild commands
+        await bot.tree.clear_commands()
+        await bot.tree.clear_commands(guild=guild)
+
+        # Re-register only the intended ones
+        await bot.tree.sync(guild=guild)  # Use only guild sync for faster updates
+
+        print(f"🍻 Quintin is ready. Synced slash commands.")
     except Exception as e:
-        print(f"❌ Failed to sync commands: {e}")
+        print(f"❌ Slash command sync failed: {e}")
+
 
 # 🔹 Ask Quintin
 @bot.tree.command(name="askquintin", description="Ask Quintin, the barkeep, anything.", guild=discord.Object(id=GUILD_ID))
