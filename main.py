@@ -111,20 +111,20 @@ async def tavern_ambience():
     if channel:
         await channel.send(random.choice(status_messages))
 
-# 🔹 On Ready
 @bot.event
 async def on_ready():
     try:
-        guild = discord.Object(id=YOUR_GUILD_ID)
+        guild = discord.Object(id=GUILD_ID)
 
-        # Clear both global and guild commands
+        # Clear global commands to prevent ghost commands
         await bot.tree.clear_commands()
+        await bot.tree.sync()  # This syncs nothing globally
+
+        # Clear and re-sync guild commands only
         await bot.tree.clear_commands(guild=guild)
+        await bot.tree.sync(guild=guild)
 
-        # Re-register only the intended ones
-        await bot.tree.sync(guild=guild)  # Use only guild sync for faster updates #new
-
-        print(f"🍻 Quintin is ready. Synced slash commands.")
+        print(f"🍻 Quintin is ready. Synced slash commands for guild {GUILD_ID}.")
     except Exception as e:
         print(f"❌ Slash command sync failed: {e}")
 
