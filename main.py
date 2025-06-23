@@ -122,7 +122,7 @@ async def on_ready():
         await bot.tree.clear_commands(guild=guild)
 
         # Re-register only the intended ones
-        await bot.tree.sync(guild=guild)  # Use only guild sync for faster updates
+        await bot.tree.sync(guild=guild)  # Use only guild sync for faster updates #new
 
         print(f"🍻 Quintin is ready. Synced slash commands.")
     except Exception as e:
