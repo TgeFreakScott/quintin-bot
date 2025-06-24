@@ -116,7 +116,7 @@ async def tavern_ambience():
 @bot.event
 async def on_ready():
     try:
-        guild = discord.Object(id=YOUR_GUILD_ID)
+        guild = discord.Object(id=GUILD_ID)
 
         # Clear both global and guild commands
         await bot.tree.clear_commands()
