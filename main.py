@@ -128,6 +128,13 @@ async def on_ready():
     except Exception as e:
         print(f"❌ Slash command sync failed: {e}")
 
+
+
+@bot.tree.command(name="ping", description="Test command to check if Quintin is alive.")
+async def ping(interaction: discord.Interaction):
+    await interaction.response.send_message("🏓 Quintin is alive and well.")
+
+
 # 🔹 Ask Quintin
 @bot.tree.command(name="askquintin", description="Ask Quintin, the barkeep, anything.", guild=discord.Object(id=GUILD_ID))
 async def askquintin(interaction: discord.Interaction, prompt: str):
