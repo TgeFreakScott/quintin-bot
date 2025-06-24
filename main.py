@@ -248,10 +248,12 @@ async def investigate(interaction: discord.Interaction, topic: str):
         await interaction.response.send_message(
             "Quintin leans in and mutters, 'Can't go spreading suspicions outside the tavern.'", ephemeral=True)
         return
+
     await interaction.response.defer(thinking=True)
     roll = random.randint(1, 20)
     topic_guess = next((word for word in topic.lower().split() if word in LORE_INDEX), "")
     lore = fetch_lore_from_index(topic_guess) if topic_guess else ""
+
     if roll == 1:
         clue_intro = "Quintin stares blankly. 'I asked around... but everyone gave me the runaround.'"
     elif roll <= 5:
@@ -264,12 +266,14 @@ async def investigate(interaction: discord.Interaction, topic: str):
         clue_intro = f"Quintin grins. 'A friend owed me a favour. Here's what I dug up on *{topic}*.'"
     else:
         clue_intro = f"Quintin wipes his hands and speaks low. 'I risked a lot pulling this thread on *{topic}*—listen closely.'"
+
     prompt = (
         f"You are Quintin, a barkeep informant. You just rolled a {roll} on a D&D-style investigation check.\n"
         f"The topic was: '{topic}'.\n"
         f"{'Known info:\n' + lore if lore else 'You don’t know much directly, but whispers abound.'}\n"
         f"Respond with a flavourful rumour, lead, or clue based on the roll result."
     )
+
     try:
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
@@ -291,7 +295,9 @@ async def menu(interaction: discord.Interaction, item: str):
         await interaction.response.send_message(
             "Quintin raises an eyebrow. 'We don’t serve out on the street, friend.'", ephemeral=True)
         return
+
     await interaction.response.defer(thinking=True)
+
     food_menu = {
         "stew": "*A bubbling cauldron of meat and vegetables, always hot, always slightly mysterious.*",
         "bread": "*Thick-sliced, fresh from the oven. Served with herbed butter and a smirk.*",
@@ -316,6 +322,7 @@ async def menu(interaction: discord.Interaction, item: str):
         "ghost grog": "*Chilled by spirits. Literally.*",
         "wyrmshot": "*A tiny vial of something green. Glows. Quintin won't tell you what's in it.*"
     }
+
     item_lower = item.lower()
     if item_lower in food_menu:
         reply = f"🍽️ Quintin nods and serves you **{item.title()}**.\n{food_menu[item_lower]}"
@@ -339,9 +346,12 @@ async def menu(interaction: discord.Interaction, item: str):
 @bot.tree.command(name="gossip", description="Quintin shares some juicy, fresh tavern gossip.", guild=GUILD_OBJECT)
 async def gossip(interaction: discord.Interaction):
     if interaction.channel.id != DISCORD_CHANNEL_ID:
-        await interaction.response.send_message("Quintin leans over the bar. 'Save it for the tavern, friend.'", ephemeral=True)
+        await interaction.response.send_message(
+            "Quintin leans over the bar. 'Save it for the tavern, friend.'", ephemeral=True)
         return
+
     await interaction.response.defer(thinking=True)
+
     prompt = (
         "You are Quintin, the barkeep of the Lucky Griffon in Alexandria. "
         "In a warm, whispery tone, share a rumour you've heard from your patrons. "
@@ -349,6 +359,7 @@ async def gossip(interaction: discord.Interaction):
         "including Kalteo, Alexandria, Big Tony, Zargathax, Ellette, Graxen, Qwimby, Steve Emberfoot, kyo, orlan, or any known figures or places from that world. "
         "Keep it under 2 sentences, and deliver it as if you're leaning in conspiratorially."
     )
+
     try:
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
@@ -358,29 +369,6 @@ async def gossip(interaction: discord.Interaction):
         await interaction.followup.send(f"*Quintin leans in and whispers:*\n> {rumour}")
     except Exception as e:
         await interaction.followup.send(f"❌ Quintin spilled the stew instead of gossiping: `{e}`")
-
-    try:
-        await interaction.response.defer()
-        
-        prompt = (
-            "You are Quintin, the barkeep of the Lucky Griffon in Alexandria. "
-            "In a warm, whispery tone, share a rumour you've heard from your patrons. "
-            "It should sound like juicy tavern gossip, mysterious or mildly absurd, and relate to the world of Sordia Vignti — "
-            "including Kalteo, Alexandria, Big Tony, Zargathax, Ellette, Graxen, Qwimby, Steve Emberfoot, kyo, orlan, or any known figures or places from that world. "
-            "Keep it under 2 sentences, and deliver it as if you're leaning in conspiratorially."
-        )
-
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "system", "content": prompt}]
-        )
-
-        rumour = response.choices[0].message.content.strip()
-        await interaction.followup.send(f"*Quintin leans in and whispers:*\n> {rumour}")
-
-    except Exception as e:
-        await interaction.followup.send(f"❌ Quintin spilled the stew instead of gossiping: `{e}`")
-
 
 #COMPLIMENT
 @bot.tree.command(name="compliment", description="Quintin gives someone a heartfelt (or odd) compliment.", guild=GUILD_OBJECT)
