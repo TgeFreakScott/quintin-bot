@@ -9,7 +9,14 @@ from openai import OpenAI
 from dotenv import load_dotenv
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from keep_alive import keep_alive
-from bs4 import BeautifulSoup  # Make sure this is in your imports
+from bs4 import BeautifulSoup
+import asyncio
+
+# For OpenAI error handling
+try:
+    import openai
+except ImportError:
+    openai = None
 
 # 🔹 Keep the bot alive with a ping server
 keep_alive()
@@ -48,12 +55,11 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 scheduler = AsyncIOScheduler()
 
-# 🔹 Sync
+# 🔹 Sync command (manual only!)
 @bot.tree.command(name="sync", description="Manually sync slash commands (admin only!)", guild=discord.Object(id=GUILD_ID))
 async def manual_sync(interaction: discord.Interaction):
     await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
     await interaction.response.send_message("Slash commands synced!", ephemeral=True)
-
 
 # 🔹 Idle tavern chatter
 status_messages = [
@@ -124,20 +130,28 @@ async def tavern_ambience():
 async def on_ready():
     print(f"Bot online as {bot.user} in guild(s):", [g.name for g in bot.guilds])
     print("Loaded GUILD_ID:", GUILD_ID, type(GUILD_ID))
+    print(f"🍻 Quintin is ready. Use /sync in Discord to register or update slash commands.")
+
+# --- HELPERS FOR AI COMMANDS ---
+async def openai_command_with_delay(interaction, messages):
+    # Adds 1s delay and error handling
+    await asyncio.sleep(1)
     try:
-        guild = discord.Object(id=GUILD_ID)
-
-        # Clear both global and guild commands
-        #await bot.tree.clear_commands()
-        #await bot.tree.clear_commands(guild=guild)
-
-        # Re-register only the intended ones
-        #synced = await bot.tree.sync(guild=guild)  # Use only guild sync for faster updates
-
-        print(f"🍻 Quintin is ready. Use /sync in Discord to register or update slash commands.")
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=messages
+        )
+        return response.choices[0].message.content
     except Exception as e:
-        print(f"❌ Slash command sync failed: {e}")
-
+        if openai and hasattr(e, "status_code") and e.status_code == 429:
+            await interaction.followup.send("Quintin mutters: 'I’m a bit overwhelmed—try again in a moment, friend!'")
+            return None
+        elif "429" in str(e):
+            await interaction.followup.send("Quintin mutters: 'Too many requests, friend. Wait a moment and try again.'")
+            return None
+        else:
+            await interaction.followup.send(f"❌ Quintin dropped his mug: `{e}`")
+            return None
 
 # 🔹 Ask Quintin
 @bot.tree.command(name="askquintin", description="Ask Quintin, the barkeep, anything.", guild=discord.Object(id=GUILD_ID))
@@ -161,57 +175,140 @@ async def askquintin(interaction: discord.Interaction, prompt: str):
                 f"but the tavern regulars whisper they once did something truly legendary..."
             )
 
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You are Quintin, the barkeep of the Lucky Griffon in Alexandria. "
-                        "You speak with dry humour and warmth, and never break character. "
-                        "You serve stew, gossip, and wisdom to adventurers.\n\n"
-                        f"Here is what you know about {topic_guess or 'this matter'}:\n{lore}"
-                    )
-                },
-                {"role": "user", "content": prompt}
-            ]
-        )
+        reply = await openai_command_with_delay(interaction, [
+            {
+                "role": "system",
+                "content": (
+                    "You are Quintin, the barkeep of the Lucky Griffon in Alexandria. "
+                    "You speak with dry humour and warmth, and never break character. "
+                    "You serve stew, gossip, and wisdom to adventurers.\n\n"
+                    f"Here is what you know about {topic_guess or 'this matter'}:\n{lore}"
+                )
+            },
+            {"role": "user", "content": prompt}
+        ])
 
-        reply = response.choices[0].message.content
-        await interaction.followup.send(reply)
+        if reply:
+            await interaction.followup.send(reply)
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        await interaction.followup.send(f"❌ Quintin dropped his mug: `{e}`")
+        await interaction.followup.send(f"❌ Quintin tripped: `{e}`")
 
-# 🔹 Sing command
-@bot.tree.command(name="sing", description="Ask Quintin to sing a tavern song.", guild=discord.Object(id=GUILD_ID))
-async def sing(interaction: discord.Interaction):
+# 🔹 Rumour
+@bot.tree.command(name="rumour", description="Quintin shares a whispered rumour from the tavern.")
+async def rumour(interaction: discord.Interaction):
+    await interaction.response.defer()
+    topic = random.choice(list(LORE_INDEX.keys()))
+    lore = fetch_lore_from_index(topic)
+    if lore.startswith("("):
+        lore = "No real knowledge survives on this, only whispers and lies."
+
+    reply = await openai_command_with_delay(interaction, [
+        {
+            "role": "system",
+            "content": (
+                "You are Quintin, a wise and slightly gruff barkeep of the Lucky Griffon tavern in Alexandria. "
+                "You speak in dry humour, always staying in character. A customer has asked for a whispered rumour. "
+                "Based on the lore I give you, invent a rumour that sounds half-believable, dramatic, or eerie. "
+                "Make it short (1–2 sentences), and make sure it feels tied to Sordia Vignti's world."
+            )
+        },
+        {"role": "user", "content": f"Lore about {topic}:\n{lore}\n\nWhat’s the rumour?"}
+    ])
+    if reply:
+        await interaction.followup.send(f"*Quintin leans in and murmurs:*\n> {reply}")
+
+# 🔹 Investigate
+@bot.tree.command(name="investigate", description="Ask Quintin to dig into a rumour or mystery.")
+async def investigate(interaction: discord.Interaction, topic: str):
     if interaction.channel.id != DISCORD_CHANNEL_ID:
         await interaction.response.send_message(
-            "Quintin grumbles, 'I only sing in the tavern, friend.'",
+            "Quintin leans in and mutters, 'Can't go spreading suspicions outside the tavern.'",
             ephemeral=True
         )
         return
 
-    song_folder = "assets"
-    song_files = [f for f in os.listdir(song_folder) if f.endswith((".mp3", ".wav"))]
+    await interaction.response.defer()
+    await asyncio.sleep(1)
 
-    if not song_files:
-        await interaction.response.send_message(
-            "Quintin scratches his head. 'No songs left in the book tonight, friend.'"
-        )
-        return
+    roll = random.randint(1, 20)
+    topic_guess = next((word for word in topic.lower().split() if word in LORE_INDEX), "")
+    lore = fetch_lore_from_index(topic_guess) if topic_guess else ""
 
-    chosen_song = random.choice(song_files)
-    file_path = os.path.join(song_folder, chosen_song)
-    song_title = os.path.splitext(chosen_song)[0].replace("_", " ").title()
+    if roll == 1:
+        clue_intro = "Quintin stares blankly. 'I asked around... but everyone gave me the runaround.'"
+    elif roll <= 5:
+        clue_intro = f"Quintin scratches his head. 'Found something odd about *{topic}*, but it might be just drunk talk...'"
+    elif roll <= 10:
+        clue_intro = f"Quintin slides a note across the bar. 'Bit of gossip about *{topic}*—could be worth a sniff.'"
+    elif roll <= 15:
+        clue_intro = f"Quintin leans in, eyes narrowing. 'Turns out *{topic}* has more to it than I thought...'"
+    elif roll < 20:
+        clue_intro = f"Quintin grins. 'A friend owed me a favour. Here's what I dug up on *{topic}*.'"
+    else:
+        clue_intro = f"Quintin wipes his hands and speaks low. 'I risked a lot pulling this thread on *{topic}*—listen closely.'"
 
-    await interaction.response.send_message(
-        content=f"*Quintin clears his throat and begins to sing:* 🎵 **{song_title}**",
-        file=File(file_path)
+    prompt = (
+        f"You are Quintin, a barkeep informant. You just rolled a {roll} on a D&D-style investigation check.\n"
+        f"The topic was: '{topic}'.\n"
+        f"{'Known info:\n' + lore if lore else 'You don’t know much directly, but whispers abound.'}\n"
+        f"Respond with a flavourful rumour, lead, or clue based on the roll result."
     )
+
+    reply = await openai_command_with_delay(interaction, [
+        {"role": "system", "content": "You are Quintin, barkeep of the Lucky Griffon. You're dry, witty, and know more than you let on."},
+        {"role": "user", "content": prompt}
+    ])
+
+    if reply:
+        await interaction.followup.send(f"🎲 *Quintin rolled a {roll} on his investigation.*\n{clue_intro}\n\n{reply}")
+
+# 🔹 Gossip
+@bot.tree.command(name="gossip", description="Quintin shares some juicy, fresh tavern gossip.")
+async def gossip(interaction: discord.Interaction):
+    await interaction.response.defer()
+    prompt = (
+        "You are Quintin, the barkeep of the Lucky Griffon in Alexandria. "
+        "In a warm, whispery tone, share a rumour you've heard from your patrons. "
+        "It should sound like juicy tavern gossip, mysterious or mildly absurd, and relate to the world of Sordia Vignti — "
+        "including Kalteo, Alexandria, Big Tony, Zargathax, Ellette, Graxen, Qwimby, Steve Emberfoot, kyo, orlan, or any known figures or places from that world. "
+        "Keep it under 2 sentences, and deliver it as if you're leaning in conspiratorially."
+    )
+    reply = await openai_command_with_delay(interaction, [
+        {"role": "system", "content": prompt}
+    ])
+    if reply:
+        await interaction.followup.send(f"*Quintin leans in and whispers:*\n> {reply}")
+
+# 🔹 Compliment
+@bot.tree.command(name="compliment", description="Quintin gives someone a heartfelt (or odd) compliment.")
+async def compliment(interaction: discord.Interaction, user: discord.User):
+    await interaction.response.defer()
+    prompt = (
+        f"You're Quintin, the barkeep of the Lucky Griffon in Alexandria. "
+        f"You're warm, witty, and charming. Give a unique and funny compliment to the adventurer {user.name}. "
+        f"Use old-timey, tavern-style flair, like something you'd say while pouring a drink."
+    )
+    reply = await openai_command_with_delay(interaction, [
+        {"role": "system", "content": prompt}
+    ])
+    if reply:
+        await interaction.followup.send(f"{user.mention} {reply}")
+
+# 🔹 Insult
+@bot.tree.command(name="insult", description="Quintin roasts someone, barkeep-style.")
+async def insult(interaction: discord.Interaction, user: discord.User):
+    await interaction.response.defer()
+    prompt = (
+        f"You're Quintin, the barkeep of the Lucky Griffon in Alexandria. "
+        f"You're sarcastic but never cruel. Roast the adventurer {user.name} with dry wit, "
+        f"like a grumpy tavern keeper who's seen too much. Keep it humorous and lighthearted."
+    )
+    reply = await openai_command_with_delay(interaction, [
+        {"role": "system", "content": prompt}
+    ])
+    if reply:
+        await interaction.followup.send(f"{user.mention} {reply}")
 
 # 🔹 List Commands
 @bot.tree.command(name="listcommands", description="Lists all registered commands.", guild=discord.Object(id=GUILD_ID))
@@ -254,104 +351,9 @@ async def who(interaction: discord.Interaction, name: str):
         await interaction.followup.send(lore)
 
     except Exception as e:
-        import traceback
-        traceback.print_exc()
         await interaction.followup.send(f"❌ Quintin dropped the ledger: `{e}`")
 
-# 🔹 Rumour
-@bot.tree.command(name="rumour", description="Quintin shares a whispered rumour from the tavern.")
-async def rumour(interaction: discord.Interaction):
-    await interaction.response.defer()
-
-    try:
-        # Pick a random topic from your lore index
-        topic = random.choice(list(LORE_INDEX.keys()))
-        lore = fetch_lore_from_index(topic)
-
-        if lore.startswith("("):  # handle fetch issues
-            lore = "No real knowledge survives on this, only whispers and lies."
-
-        # Generate a rumour using OpenAI
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You are Quintin, a wise and slightly gruff barkeep of the Lucky Griffon tavern in Alexandria. "
-                        "You speak in dry humour, always staying in character. A customer has asked for a whispered rumour. "
-                        "Based on the lore I give you, invent a rumour that sounds half-believable, dramatic, or eerie. "
-                        "Make it short (1–2 sentences), and make sure it feels tied to Sordia Vignti's world."
-                    )
-                },
-                {"role": "user", "content": f"Lore about {topic}:\n{lore}\n\nWhat’s the rumour?"}
-            ]
-        )
-
-        rumour_text = response.choices[0].message.content.strip()
-
-        await interaction.followup.send(f"*Quintin leans in and murmurs:*\n> {rumour_text}")
-
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        await interaction.followup.send("❌ Quintin burned the stew trying to remember that rumour.")
-
-# 🔹 Investigate
-@bot.tree.command(name="investigate", description="Ask Quintin to dig into a rumour or mystery.")
-async def investigate(interaction: discord.Interaction, topic: str):
-    if interaction.channel.id != DISCORD_CHANNEL_ID:
-        await interaction.response.send_message(
-            "Quintin leans in and mutters, 'Can't go spreading suspicions outside the tavern.'",
-            ephemeral=True
-        )
-        return
-
-    await interaction.response.defer()
-
-    # Roll a d20 to determine investigation quality
-    roll = random.randint(1, 20)
-
-    # Try to identify known lore
-    topic_guess = next((word for word in topic.lower().split() if word in LORE_INDEX), "")
-    lore = fetch_lore_from_index(topic_guess) if topic_guess else ""
-
-    # Vary the tone based on the roll
-    if roll == 1:
-        clue_intro = "Quintin stares blankly. 'I asked around... but everyone gave me the runaround.'"
-    elif roll <= 5:
-        clue_intro = f"Quintin scratches his head. 'Found something odd about *{topic}*, but it might be just drunk talk...'"
-    elif roll <= 10:
-        clue_intro = f"Quintin slides a note across the bar. 'Bit of gossip about *{topic}*—could be worth a sniff.'"
-    elif roll <= 15:
-        clue_intro = f"Quintin leans in, eyes narrowing. 'Turns out *{topic}* has more to it than I thought...'"
-    elif roll < 20:
-        clue_intro = f"Quintin grins. 'A friend owed me a favour. Here's what I dug up on *{topic}*.'"
-    else:
-        clue_intro = f"Quintin wipes his hands and speaks low. 'I risked a lot pulling this thread on *{topic}*—listen closely.'"
-
-    # Prompt for GPT response
-    prompt = (
-        f"You are Quintin, a barkeep informant. You just rolled a {roll} on a D&D-style investigation check.\n"
-        f"The topic was: '{topic}'.\n"
-        f"{'Known info:\n' + lore if lore else 'You don’t know much directly, but whispers abound.'}\n"
-        f"Respond with a flavourful rumour, lead, or clue based on the roll result."
-    )
-
-    try:
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are Quintin, barkeep of the Lucky Griffon. You're dry, witty, and know more than you let on."},
-                {"role": "user", "content": prompt}
-            ]
-        )
-        clue = response.choices[0].message.content
-        await interaction.followup.send(f"🎲 *Quintin rolled a {roll} on his investigation.*\n{clue_intro}\n\n{clue}")
-    except Exception as e:
-        await interaction.followup.send(f"Quintin groans. 'Something went wrong with my digging: `{e}`'")
-
-# 🔹 Menu
+# 🔹 Menu (no OpenAI needed)
 @bot.tree.command(name="menu", description="Order food or drinks from the Lucky Griffon.")
 @app_commands.describe(item="What would you like to order?")
 async def menu(interaction: discord.Interaction, item: str):
@@ -364,7 +366,6 @@ async def menu(interaction: discord.Interaction, item: str):
 
     await interaction.response.defer()
 
-    # Expanded menu
     food_menu = {
         "stew": "*A bubbling cauldron of meat and vegetables, always hot, always slightly mysterious.*",
         "bread": "*Thick-sliced, fresh from the oven. Served with herbed butter and a smirk.*",
@@ -412,69 +413,33 @@ async def menu(interaction: discord.Interaction, item: str):
 
     await interaction.followup.send(reply)
 
-# 🔹 Gossip
-@bot.tree.command(name="gossip", description="Quintin shares some juicy, fresh tavern gossip.")
-async def gossip(interaction: discord.Interaction):
-    try:
-        await interaction.response.defer()
-        
-        prompt = (
-            "You are Quintin, the barkeep of the Lucky Griffon in Alexandria. "
-            "In a warm, whispery tone, share a rumour you've heard from your patrons. "
-            "It should sound like juicy tavern gossip, mysterious or mildly absurd, and relate to the world of Sordia Vignti — "
-            "including Kalteo, Alexandria, Big Tony, Zargathax, Ellette, Graxen, Qwimby, Steve Emberfoot, kyo, orlan, or any known figures or places from that world. "
-            "Keep it under 2 sentences, and deliver it as if you're leaning in conspiratorially."
+# 🔹 Sing command (no OpenAI)
+@bot.tree.command(name="sing", description="Ask Quintin to sing a tavern song.", guild=discord.Object(id=GUILD_ID))
+async def sing(interaction: discord.Interaction):
+    if interaction.channel.id != DISCORD_CHANNEL_ID:
+        await interaction.response.send_message(
+            "Quintin grumbles, 'I only sing in the tavern, friend.'",
+            ephemeral=True
         )
+        return
 
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "system", "content": prompt}]
+    song_folder = "assets"
+    song_files = [f for f in os.listdir(song_folder) if f.endswith((".mp3", ".wav"))]
+
+    if not song_files:
+        await interaction.response.send_message(
+            "Quintin scratches his head. 'No songs left in the book tonight, friend.'"
         )
+        return
 
-        rumour = response.choices[0].message.content.strip()
-        await interaction.followup.send(f"*Quintin leans in and whispers:*\n> {rumour}")
+    chosen_song = random.choice(song_files)
+    file_path = os.path.join(song_folder, chosen_song)
+    song_title = os.path.splitext(chosen_song)[0].replace("_", " ").title()
 
-    except Exception as e:
-        await interaction.followup.send(f"❌ Quintin spilled the stew instead of gossiping: `{e}`")
-
-# 🔹 Compliment
-@bot.tree.command(name="compliment", description="Quintin gives someone a heartfelt (or odd) compliment.")
-async def compliment(interaction: discord.Interaction, user: discord.User):
-    await interaction.response.defer()
-    prompt = (
-        f"You're Quintin, the barkeep of the Lucky Griffon in Alexandria. "
-        f"You're warm, witty, and charming. Give a unique and funny compliment to the adventurer {user.name}. "
-        f"Use old-timey, tavern-style flair, like something you'd say while pouring a drink."
+    await interaction.response.send_message(
+        content=f"*Quintin clears his throat and begins to sing:* 🎵 **{song_title}**",
+        file=File(file_path)
     )
-    try:
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "system", "content": prompt}]
-        )
-        reply = response.choices[0].message.content
-        await interaction.followup.send(f"{user.mention} {reply}")
-    except Exception as e:
-        await interaction.followup.send(f"❌ Quintin dropped the bottle: `{e}`")
-
-# 🔹 Insult
-@bot.tree.command(name="insult", description="Quintin roasts someone, barkeep-style.")
-async def insult(interaction: discord.Interaction, user: discord.User):
-    await interaction.response.defer()
-    prompt = (
-        f"You're Quintin, the barkeep of the Lucky Griffon in Alexandria. "
-        f"You're sarcastic but never cruel. Roast the adventurer {user.name} with dry wit, "
-        f"like a grumpy tavern keeper who's seen too much. Keep it humorous and lighthearted."
-    )
-    try:
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "system", "content": prompt}]
-        )
-        reply = response.choices[0].message.content
-        await interaction.followup.send(f"{user.mention} {reply}")
-    except Exception as e:
-        await interaction.followup.send(f"❌ Quintin choked on his own sass: `{e}`")
-
 
 # 🔹 Run the bot
 bot.run(DISCORD_TOKEN)
