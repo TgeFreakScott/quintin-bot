@@ -1,4 +1,4 @@
-#ver. 2.0
+#ver. 2.2
 
 import os
 import json
@@ -121,19 +121,12 @@ async def tavern_ambience():
 async def on_ready():
     try:
         guild = discord.Object(id=GUILD_ID)
-
-        # Clear global and guild-specific commands
-        await bot.tree.clear_commands()
-        await bot.tree.sync()
         await bot.tree.clear_commands(guild=guild)
         await bot.tree.sync(guild=guild)
-
         scheduler.start()
-
-        print(f"🍻 Quintin is ready. Synced slash commands for guild {GUILD_ID}.")
+        print(f"🍻 Quintin is ready. Synced slash commands to guild {GUILD_ID}.")
     except Exception as e:
         print(f"❌ Slash command sync failed: {e}")
-
 
 # 🔹 Ask Quintin
 @bot.tree.command(name="askquintin", description="Ask Quintin, the barkeep, anything.", guild=discord.Object(id=GUILD_ID))
