@@ -121,22 +121,14 @@ async def tavern_ambience():
 async def on_ready():
     try:
         guild = discord.Object(id=GUILD_ID)
-
-        # 🔥 Wipe existing commands in this guild
         await bot.tree.clear_commands(guild=guild)
-
-        # Optional: this line isn't needed unless you plan to copy global ones (we're overwriting anyway)
-        # bot.tree.copy_global_to(guild=guild)
-
-        # 🔄 Sync the current commands from code
+        bot.tree.copy_global_to(guild=guild)
         await bot.tree.sync(guild=guild)
-
-        # 🔔 Start background scheduler (tavern ambience)
         scheduler.start()
-
-        print(f"🍻 Quintin is ready. Wiped & synced slash commands to guild {GUILD_ID}.")
+        print(f"🍻 Quintin is ready. Synced slash commands to guild {GUILD_ID}.")
     except Exception as e:
         print(f"❌ Slash command sync failed: {e}")
+
 
 
 @bot.tree.command(name="ping", description="Test command to check if Quintin is alive.")
