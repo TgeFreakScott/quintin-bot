@@ -48,6 +48,13 @@ intents.message_content = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 scheduler = AsyncIOScheduler()
 
+# 🔹 Sync
+@bot.tree.command(name="sync", description="Manually sync slash commands (admin only!)", guild=discord.Object(id=GUILD_ID))
+async def manual_sync(interaction: discord.Interaction):
+    await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
+    await interaction.response.send_message("Slash commands synced!", ephemeral=True)
+
+
 # 🔹 Idle tavern chatter
 status_messages = [
     "*Quintin quietly sweeps the tavern floor, whistling a forgotten tune.*",
@@ -115,17 +122,19 @@ async def tavern_ambience():
 # 🔹 On Ready
 @bot.event
 async def on_ready():
+    print(f"Bot online as {bot.user} in guild(s):", [g.name for g in bot.guilds])
+    print("Loaded GUILD_ID:", GUILD_ID, type(GUILD_ID))
     try:
         guild = discord.Object(id=GUILD_ID)
 
         # Clear both global and guild commands
-        await bot.tree.clear_commands()
-        await bot.tree.clear_commands(guild=guild)
+        #await bot.tree.clear_commands()
+        #await bot.tree.clear_commands(guild=guild)
 
         # Re-register only the intended ones
-        await bot.tree.sync(guild=guild)  # Use only guild sync for faster updates
+        synced = await bot.tree.sync(guild=guild)  # Use only guild sync for faster updates
 
-        print(f"🍻 Quintin is ready. Synced slash commands.")
+        print(f"🍻 Quintin is ready. Synced slash commands: {[cmd.name for cmd in synced]}")
     except Exception as e:
         print(f"❌ Slash command sync failed: {e}")
 
