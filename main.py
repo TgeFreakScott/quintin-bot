@@ -121,7 +121,6 @@ async def tavern_ambience():
 async def on_ready():
     try:
         guild = discord.Object(id=GUILD_ID)
-        await bot.tree.clear_commands(guild=guild)
         bot.tree.copy_global_to(guild=guild)
         await bot.tree.sync(guild=guild)
         scheduler.start()
