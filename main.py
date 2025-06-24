@@ -9,7 +9,6 @@ from openai import OpenAI
 from dotenv import load_dotenv
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from keep_alive import keep_alive
-from bs4 import BeautifulSoup  # Make sure this is in your imports
 
 # 🔹 Keep the bot alive with a ping server
 keep_alive()
@@ -112,20 +111,20 @@ async def tavern_ambience():
     if channel:
         await channel.send(random.choice(status_messages))
 
+# 🔹 On Ready
 @bot.event
 async def on_ready():
     try:
-        guild = discord.Object(id=GUILD_ID)
+        guild = discord.Object(id=YOUR_GUILD_ID)
 
-        # Clear global commands to prevent ghost commands
+        # Clear both global and guild commands
         await bot.tree.clear_commands()
-        await bot.tree.sync()  # This syncs nothing globally
-
-        # Clear and re-sync guild commands only
         await bot.tree.clear_commands(guild=guild)
-        await bot.tree.sync(guild=guild)
 
-        print(f"🍻 Quintin is ready. Synced slash commands for guild {GUILD_ID}.")
+        # Re-register only the intended ones
+        await bot.tree.sync(guild=guild)  # Use only guild sync for faster updates
+
+        print(f"🍻 Quintin is ready. Synced slash commands.")
     except Exception as e:
         print(f"❌ Slash command sync failed: {e}")
 
@@ -210,7 +209,7 @@ async def list_commands(interaction: discord.Interaction):
     cmds = [cmd.name for cmd in bot.tree.get_commands(guild=discord.Object(id=GUILD_ID))]
     await interaction.response.send_message(f"Registered commands: {', '.join(cmds)}")
 
-
+from bs4 import BeautifulSoup  # Make sure this is in your imports
 
 @bot.tree.command(name="who", description="Ask Quintin about someone from the world.")
 async def who(interaction: discord.Interaction, name: str):
