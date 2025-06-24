@@ -1,4 +1,4 @@
-#ver. 2.3
+#ver. 2.4
 
 import os
 import json
@@ -121,7 +121,7 @@ async def tavern_ambience():
 async def on_ready():
     try:
         guild = discord.Object(id=GUILD_ID)
-        await bot.tree.clear_commands(guild=guild)
+        bot.tree.copy_global_to(guild=guild)
         await bot.tree.sync(guild=guild)
         scheduler.start()
         print(f"🍻 Quintin is ready. Synced slash commands to guild {GUILD_ID}.")
