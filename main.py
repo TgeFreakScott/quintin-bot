@@ -111,8 +111,6 @@ status_messages = [
     "*Quintin lights a lantern, then lowers its flame to a soft glow.*"
 ]
 
-guild.commands.delete('1387124068007809184')
-
 @scheduler.scheduled_job("interval", minutes=60)
 async def tavern_ambience():
     channel = bot.get_channel(DISCORD_CHANNEL_ID)
