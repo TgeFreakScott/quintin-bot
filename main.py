@@ -143,7 +143,7 @@ async def ping(interaction: discord.Interaction):
     await interaction.response.send_message("🏓 Pong.")
 
 # 🔹 Ask Quintin
-@bot.tree.command(name="askquintin", description="Ask Quintin, the barkeep, anything.")
+@bot.tree.command(name="askquintin", description="Ask Quintin, the barkeep, anything.", guild=discord.Object(id=GUILD_ID))
 async def askquintin(interaction: discord.Interaction, prompt: str):
     try:
         if interaction.channel.id != DISCORD_CHANNEL_ID:
@@ -189,8 +189,8 @@ async def askquintin(interaction: discord.Interaction, prompt: str):
         await interaction.followup.send(f"❌ Quintin dropped his mug: `{e}`")
 
 # 🔹 Sing command
-@bot.tree.command(name="sing", description="Ask Quintin to sing a tavern song.")
-async def sing(interaction: discord.Interaction, name: str):
+@bot.tree.command(name="sing", description="Ask Quintin to sing a tavern song.", guild=discord.Object(id=GUILD_ID))
+async def sing(interaction: discord.Interaction):
     if interaction.channel.id != DISCORD_CHANNEL_ID:
         await interaction.response.send_message(
             "Quintin grumbles, 'I only sing in the tavern, friend.'",
@@ -217,8 +217,8 @@ async def sing(interaction: discord.Interaction, name: str):
     )
 
 # 🔹 List Commands
-@bot.tree.command(name="listcommands", description="Lists all registered commands.")
-async def list_commands(interaction: discord.Interaction, name: str):
+@bot.tree.command(name="listcommands", description="Lists all registered commands.", guild=discord.Object(id=GUILD_ID))
+async def list_commands(interaction: discord.Interaction):
     cmds = [cmd.name for cmd in bot.tree.get_commands(guild=discord.Object(id=GUILD_ID))]
     await interaction.response.send_message(f"Registered commands: {', '.join(cmds)}")
 
