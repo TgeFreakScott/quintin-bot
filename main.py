@@ -132,9 +132,9 @@ async def on_ready():
         #await bot.tree.clear_commands(guild=guild)
 
         # Re-register only the intended ones
-        synced = await bot.tree.sync(guild=guild)  # Use only guild sync for faster updates
+        #synced = await bot.tree.sync(guild=guild)  # Use only guild sync for faster updates
 
-        print(f"🍻 Quintin is ready. Synced slash commands: {[cmd.name for cmd in synced]}")
+        print(f"🍻 Quintin is ready. Use /sync in Discord to register or update slash commands.")
     except Exception as e:
         print(f"❌ Slash command sync failed: {e}")
 
