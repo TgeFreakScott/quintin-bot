@@ -8,6 +8,7 @@ from discord.ext import commands
 from openai import OpenAI
 from dotenv import load_dotenv
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from bs4 import BeautifulSoup
 from keep_alive import keep_alive
 
 # 🔹 Keep the bot alive with a ping server
@@ -24,7 +25,10 @@ def fetch_lore_from_index(topic: str) -> str:
             url = LORE_INDEX[topic]
             response = requests.get(url)
             if response.status_code == 200:
-                return response.text.strip()[:2000]
+                soup = BeautifulSoup(response.text, "html.parser")
+                content_text = soup.get_text(separator="\n").strip()
+                paragraphs = [p.strip() for p in content_text.split("\n") if len(p.strip()) > 50]
+                return "\n\n".join(random.sample(paragraphs, min(2, len(paragraphs))))[:2000]
             else:
                 return f"(Couldn't load {topic} lore: {response.status_code})"
         else:
@@ -37,7 +41,7 @@ load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 DISCORD_CHANNEL_ID = 1385397409550565566
-GUILD_ID = 1383828857827758151  # Your server ID
+GUILD_ID = 1383828857827758151
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
@@ -116,13 +120,13 @@ async def on_ready():
     try:
         guild = discord.Object(id=GUILD_ID)
 
-        # Clear global commands to prevent ghost commands
+        # Clear global and guild-specific commands
         await bot.tree.clear_commands()
-        await bot.tree.sync()  # This syncs nothing globally
-
-        # Clear and re-sync guild commands only
+        await bot.tree.sync()
         await bot.tree.clear_commands(guild=guild)
         await bot.tree.sync(guild=guild)
+
+        scheduler.start()
 
         print(f"🍻 Quintin is ready. Synced slash commands for guild {GUILD_ID}.")
     except Exception as e:
