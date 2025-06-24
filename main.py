@@ -9,6 +9,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from keep_alive import keep_alive
+from bs4 import BeautifulSoup  # Make sure this is in your imports
 
 # 🔹 Keep the bot alive with a ping server
 keep_alive()
@@ -209,8 +210,7 @@ async def list_commands(interaction: discord.Interaction):
     cmds = [cmd.name for cmd in bot.tree.get_commands(guild=discord.Object(id=GUILD_ID))]
     await interaction.response.send_message(f"Registered commands: {', '.join(cmds)}")
 
-from bs4 import BeautifulSoup  # Make sure this is in your imports
-
+# 🔹 Who
 @bot.tree.command(name="who", description="Ask Quintin about someone from the world.")
 async def who(interaction: discord.Interaction, name: str):
     if interaction.channel.id != DISCORD_CHANNEL_ID:
@@ -249,7 +249,7 @@ async def who(interaction: discord.Interaction, name: str):
         traceback.print_exc()
         await interaction.followup.send(f"❌ Quintin dropped the ledger: `{e}`")
 
-
+# 🔹 Rumour
 @bot.tree.command(name="rumour", description="Quintin shares a whispered rumour from the tavern.")
 async def rumour(interaction: discord.Interaction):
     await interaction.response.defer()
@@ -288,8 +288,7 @@ async def rumour(interaction: discord.Interaction):
         traceback.print_exc()
         await interaction.followup.send("❌ Quintin burned the stew trying to remember that rumour.")
 
-import random
-
+# 🔹 Investigate
 @bot.tree.command(name="investigate", description="Ask Quintin to dig into a rumour or mystery.")
 async def investigate(interaction: discord.Interaction, topic: str):
     if interaction.channel.id != DISCORD_CHANNEL_ID:
@@ -343,6 +342,7 @@ async def investigate(interaction: discord.Interaction, topic: str):
     except Exception as e:
         await interaction.followup.send(f"Quintin groans. 'Something went wrong with my digging: `{e}`'")
 
+# 🔹 Menu
 @bot.tree.command(name="menu", description="Order food or drinks from the Lucky Griffon.")
 @app_commands.describe(item="What would you like to order?")
 async def menu(interaction: discord.Interaction, item: str):
@@ -403,6 +403,7 @@ async def menu(interaction: discord.Interaction, item: str):
 
     await interaction.followup.send(reply)
 
+# 🔹 Gossip
 @bot.tree.command(name="gossip", description="Quintin shares some juicy, fresh tavern gossip.")
 async def gossip(interaction: discord.Interaction):
     try:
@@ -427,6 +428,7 @@ async def gossip(interaction: discord.Interaction):
     except Exception as e:
         await interaction.followup.send(f"❌ Quintin spilled the stew instead of gossiping: `{e}`")
 
+# 🔹 Compliment
 @bot.tree.command(name="compliment", description="Quintin gives someone a heartfelt (or odd) compliment.")
 async def compliment(interaction: discord.Interaction, user: discord.User):
     await interaction.response.defer()
@@ -445,7 +447,7 @@ async def compliment(interaction: discord.Interaction, user: discord.User):
     except Exception as e:
         await interaction.followup.send(f"❌ Quintin dropped the bottle: `{e}`")
 
-
+# 🔹 Insult
 @bot.tree.command(name="insult", description="Quintin roasts someone, barkeep-style.")
 async def insult(interaction: discord.Interaction, user: discord.User):
     await interaction.response.defer()
