@@ -121,103 +121,142 @@ async def on_ready():
     except Exception as e:
         print(f"❌ Slash command sync failed: {e}")
 
-#PING
-@bot.tree.command(name="ping", description="Test command to check if Quintin is alive.", guild=GUILD_OBJECT)
+#PING 1.1
+@bot.tree.command(name="ping", description="Test command to check if Quintin is alive.", guild=discord.Object(id=GUILD_ID))
 async def ping(interaction: discord.Interaction):
+    if interaction.channel.id != DISCORD_CHANNEL_ID:
+        await interaction.response.send_message("Quintin nods. 'Ping only works in the bar, friend.'", ephemeral=True)
+        return
+
     await interaction.response.send_message("🏓 Pong.")
 
-#ASK QUINTIN
-@bot.tree.command(name="askquintin", description="Ask Quintin, the barkeep, anything.", guild=GUILD_OBJECT)
+#ASK QUINTIN 1.1
+@bot.tree.command(name="askquintin", description="Ask Quintin, the barkeep, anything.", guild=discord.Object(id=GUILD_ID))
 @app_commands.describe(prompt="What do you want to ask Quintin?")
 async def askquintin(interaction: discord.Interaction, prompt: str):
+    # Only respond if in the right channel
     if interaction.channel.id != DISCORD_CHANNEL_ID:
-        await interaction.response.send_message("Quintin wipes his hands and says, 'We only talk shop at the bar, friend.'", ephemeral=True)
+        await interaction.response.send_message(
+            "Quintin wipes his hands and says, 'We only talk shop at the bar, friend.'",
+            ephemeral=True
+        )
         return
-    await interaction.response.defer(thinking=True)
+
+    await interaction.response.defer(thinking=True)  # Defer ONCE and ASAP
+
     try:
         topic_guess = next((word for word in prompt.lower().split() if word in LORE_INDEX), "")
         lore = fetch_lore_from_index(topic_guess) if topic_guess else ""
+
         if lore.startswith("("):
-            lore = f"Rumour has it, no one really knows the full story of {topic_guess.capitalize()}, but the tavern regulars whisper they once did something truly legendary..."
+            lore = (
+                f"Rumour has it, no one really knows the full story of {topic_guess.capitalize()}, "
+                f"but the tavern regulars whisper they once did something truly legendary..."
+            )
+
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": f"You are Quintin, the barkeep of the Lucky Griffon in Alexandria. You speak with dry humour and warmth. Here is what you know about {topic_guess or 'this matter'}:\n{lore}"},
+                {
+                    "role": "system",
+                    "content": (
+                        "You are Quintin, the barkeep of the Lucky Griffon in Alexandria. "
+                        "You speak with dry humour and warmth, and never break character. "
+                        "You serve stew, gossip, and wisdom to adventurers.\n\n"
+                        f"Here is what you know about {topic_guess or 'this matter'}:\n{lore}"
+                    )
+                },
                 {"role": "user", "content": prompt}
             ]
         )
+
         reply = response.choices[0].message.content.strip()
         await interaction.followup.send(reply)
+
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         await interaction.followup.send(f"❌ Quintin dropped his mug: `{e}`")
 
-#SING
-@bot.tree.command(name="sing", description="Ask Quintin to sing a tavern song.", guild=GUILD_OBJECT)
+#SING 1.1
+@bot.tree.command(name="sing", description="Ask Quintin to sing a tavern song.", guild=discord.Object(id=GUILD_ID))
 async def sing(interaction: discord.Interaction):
     if interaction.channel.id != DISCORD_CHANNEL_ID:
-        await interaction.response.send_message("Quintin grumbles, 'I only sing in the tavern, friend.'", ephemeral=True)
+        await interaction.response.send_message(
+            "Quintin grumbles, 'I only sing in the tavern, friend.'", ephemeral=True)
         return
+
     song_folder = "assets"
-    if not os.path.isdir(song_folder):
-        await interaction.response.send_message("Quintin scratches his head. 'No songs left in the book tonight, friend.'")
-        return
     song_files = [f for f in os.listdir(song_folder) if f.endswith((".mp3", ".wav"))]
+
     if not song_files:
-        await interaction.response.send_message("Quintin scratches his head. 'No songs left in the book tonight, friend.'")
+        await interaction.response.send_message(
+            "Quintin scratches his head. 'No songs left in the book tonight, friend.'"
+        )
         return
+
     chosen_song = random.choice(song_files)
     file_path = os.path.join(song_folder, chosen_song)
     song_title = os.path.splitext(chosen_song)[0].replace("_", " ").title()
-    await interaction.response.send_message(content=f"*Quintin clears his throat and begins to sing:* 🎵 **{song_title}**", file=File(file_path))
 
-#LIS COMMANDS
-@bot.tree.command(name="listcommands", description="Lists all registered commands.", guild=GUILD_OBJECT)
-async def list_commands(interaction: discord.Interaction):
+    # Use response.send_message for the first/only reply in an interaction
+    await interaction.response.send_message(
+        content=f"*Quintin clears his throat and begins to sing:* 🎵 **{song_title}**",
+        file=File(file_path)
+    )
+
+#LIST COMMANDS 1.1
+@bot.tree.command(name="listcommands", description="Lists all registered commands.", guild=discord.Object(id=GUILD_ID))
+async def listcommands(interaction: discord.Interaction):
+    if interaction.channel.id != DISCORD_CHANNEL_ID:
+        await interaction.response.send_message(
+            "Quintin grunts. 'Check the menu inside, not out here.'", ephemeral=True)
+        return
+
     await interaction.response.defer(thinking=True)
-    cmds = [cmd.name for cmd in bot.tree.get_commands(guild=GUILD_OBJECT)]
+
+    cmds = [cmd.name for cmd in bot.tree.get_commands(guild=discord.Object(id=GUILD_ID))]
     await interaction.followup.send(f"Registered commands: {', '.join(cmds)}")
 
 from bs4 import BeautifulSoup  # Make sure this is in your imports
 
-#WHO
-@bot.tree.command(name="who", description="Ask Quintin about someone from the world.", guild=GUILD_OBJECT)
-@app_commands.describe(name="Name of the person or figure.")
-async def who(interaction: discord.Interaction, name: str):
+#WHO 1.1
+@bot.tree.command(name="sing", description="Ask Quintin to sing a tavern song.", guild=discord.Object(id=GUILD_ID))
+async def sing(interaction: discord.Interaction):
     if interaction.channel.id != DISCORD_CHANNEL_ID:
         await interaction.response.send_message(
-            "Quintin raises an eyebrow. 'Only regulars get to ask about folks, friend.'", ephemeral=True)
+            "Quintin grumbles, 'I only sing in the tavern, friend.'", ephemeral=True)
         return
-    await interaction.response.defer(thinking=True)
-    try:
-        name_key = name.lower()
-        if name_key in LORE_INDEX:
-            url = LORE_INDEX[name_key]
-            response = requests.get(url)
-            if response.status_code == 200:
-                soup = BeautifulSoup(response.text, "html.parser")
-                content_text = soup.get_text(separator="\n").strip()
-                paragraphs = [p.strip() for p in content_text.split("\n") if len(p.strip()) > 50]
-                if paragraphs:
-                    snippet = "\n\n".join(random.sample(paragraphs, min(2, len(paragraphs))))
-                    lore = f"**About {name.title()}**\n{snippet[:2000]}"
-                else:
-                    lore = f"Quintin flips through the ledger. 'Strange, nothing here on {name.title()}.'"
-            else:
-                lore = f"Quintin frowns. 'Trouble finding the records for {name.title()} – the ledger gave me a {response.status_code} error.'"
-        else:
-            lore = f"Quintin scratches his beard. 'Can’t say I know much about {name.title()}, but the name rings a bell…'"
-        await interaction.followup.send(lore)
-    except Exception as e:
-        await interaction.followup.send(f"❌ Quintin dropped the ledger: `{e}`")
 
-#RUMOUR
-@bot.tree.command(name="rumour", description="Quintin shares a whispered rumour from the tavern.", guild=GUILD_OBJECT)
+    song_folder = "assets"
+    song_files = [f for f in os.listdir(song_folder) if f.endswith((".mp3", ".wav"))]
+
+    if not song_files:
+        await interaction.response.send_message(
+            "Quintin scratches his head. 'No songs left in the book tonight, friend.'"
+        )
+        return
+
+    chosen_song = random.choice(song_files)
+    file_path = os.path.join(song_folder, chosen_song)
+    song_title = os.path.splitext(chosen_song)[0].replace("_", " ").title()
+
+    # Use response.send_message for the first/only reply in an interaction
+    await interaction.response.send_message(
+        content=f"*Quintin clears his throat and begins to sing:* 🎵 **{song_title}**",
+        file=File(file_path)
+    )
+
+#RUMOUR 1.1
+@bot.tree.command(name="rumour", description="Quintin shares a whispered rumour from the tavern.", guild=discord.Object(id=GUILD_ID))
 async def rumour(interaction: discord.Interaction):
     if interaction.channel.id != DISCORD_CHANNEL_ID:
         await interaction.response.send_message(
-            "Quintin leans over the bar. 'Save it for the tavern, friend.'", ephemeral=True)
+            "Quintin squints. 'Only rumours in the tavern, friend.'", ephemeral=True)
         return
+
     await interaction.response.defer(thinking=True)
+
     try:
         topic = random.choice(list(LORE_INDEX.keys()))
         lore = fetch_lore_from_index(topic)
@@ -226,78 +265,73 @@ async def rumour(interaction: discord.Interaction):
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": (
-                    "You are Quintin, a wise and slightly gruff barkeep of the Lucky Griffon tavern in Alexandria. "
-                    "You speak in dry humour, always staying in character. A customer has asked for a whispered rumour. "
-                    "Based on the lore I give you, invent a rumour that sounds half-believable, dramatic, or eerie. "
-                    "Make it short (1–2 sentences), and make sure it feels tied to Sordia Vignti's world."
-                )},
+                {
+                    "role": "system",
+                    "content": (
+                        "You are Quintin, a wise and slightly gruff barkeep of the Lucky Griffon tavern in Alexandria. "
+                        "You speak in dry humour, always staying in character. A customer has asked for a whispered rumour. "
+                        "Based on the lore I give you, invent a rumour that sounds half-believable, dramatic, or eerie. "
+                        "Make it short (1–2 sentences), and make sure it feels tied to Sordia Vignti's world."
+                    )
+                },
                 {"role": "user", "content": f"Lore about {topic}:\n{lore}\n\nWhat’s the rumour?"}
             ]
         )
         rumour_text = response.choices[0].message.content.strip()
         await interaction.followup.send(f"*Quintin leans in and murmurs:*\n> {rumour_text}")
     except Exception as e:
-        await interaction.followup.send("❌ Quintin burned the stew trying to remember that rumour.")
+        await interaction.followup.send(f"❌ Quintin burned the stew trying to remember that rumour: `{e}`")
 
-#INVESTIGATE
-@bot.tree.command(name="investigate", description="Ask Quintin to dig into a rumour or mystery.", guild=GUILD_OBJECT)
-@app_commands.describe(topic="Topic to investigate")
-async def investigate(interaction: discord.Interaction, topic: str):
+#INVESTIGATE 1.1
+@bot.tree.command(name="askquintin", description="Ask Quintin, the barkeep, anything.", guild=discord.Object(id=GUILD_ID))
+@app_commands.describe(prompt="What do you want to ask Quintin?")
+async def askquintin(interaction: discord.Interaction, prompt: str):
     if interaction.channel.id != DISCORD_CHANNEL_ID:
         await interaction.response.send_message(
-            "Quintin leans in and mutters, 'Can't go spreading suspicions outside the tavern.'", ephemeral=True)
+            "Quintin wipes his hands and says, 'We only talk shop at the bar, friend.'",
+            ephemeral=True
+        )
         return
 
     await interaction.response.defer(thinking=True)
-    roll = random.randint(1, 20)
-    topic_guess = next((word for word in topic.lower().split() if word in LORE_INDEX), "")
-    lore = fetch_lore_from_index(topic_guess) if topic_guess else ""
-
-    if roll == 1:
-        clue_intro = "Quintin stares blankly. 'I asked around... but everyone gave me the runaround.'"
-    elif roll <= 5:
-        clue_intro = f"Quintin scratches his head. 'Found something odd about *{topic}*, but it might be just drunk talk...'"
-    elif roll <= 10:
-        clue_intro = f"Quintin slides a note across the bar. 'Bit of gossip about *{topic}*—could be worth a sniff.'"
-    elif roll <= 15:
-        clue_intro = f"Quintin leans in, eyes narrowing. 'Turns out *{topic}* has more to it than I thought...'"
-    elif roll < 20:
-        clue_intro = f"Quintin grins. 'A friend owed me a favour. Here's what I dug up on *{topic}*.'"
-    else:
-        clue_intro = f"Quintin wipes his hands and speaks low. 'I risked a lot pulling this thread on *{topic}*—listen closely.'"
-
-    prompt = (
-        f"You are Quintin, a barkeep informant. You just rolled a {roll} on a D&D-style investigation check.\n"
-        f"The topic was: '{topic}'.\n"
-        f"{'Known info:\n' + lore if lore else 'You don’t know much directly, but whispers abound.'}\n"
-        f"Respond with a flavourful rumour, lead, or clue based on the roll result."
-    )
 
     try:
+        topic_guess = next((word for word in prompt.lower().split() if word in LORE_INDEX), "")
+        lore = fetch_lore_from_index(topic_guess) if topic_guess else ""
+        if lore.startswith("("):
+            lore = (
+                f"Rumour has it, no one really knows the full story of {topic_guess.capitalize()}, "
+                f"but the tavern regulars whisper they once did something truly legendary..."
+            )
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are Quintin, barkeep of the Lucky Griffon. You're dry, witty, and know more than you let on."},
+                {
+                    "role": "system",
+                    "content": (
+                        "You are Quintin, the barkeep of the Lucky Griffon in Alexandria. "
+                        "You speak with dry humour and warmth, and never break character. "
+                        "You serve stew, gossip, and wisdom to adventurers.\n\n"
+                        f"Here is what you know about {topic_guess or 'this matter'}:\n{lore}"
+                    )
+                },
                 {"role": "user", "content": prompt}
             ]
         )
-        clue = response.choices[0].message.content
-        await interaction.followup.send(f"🎲 *Quintin rolled a {roll} on his investigation.*\n{clue_intro}\n\n{clue}")
+        reply = response.choices[0].message.content.strip()
+        await interaction.followup.send(reply)
     except Exception as e:
-        await interaction.followup.send(f"Quintin groans. 'Something went wrong with my digging: `{e}`'")
+        await interaction.followup.send(f"❌ Quintin dropped his mug: `{e}`")
 
-#MENU
-@bot.tree.command(name="menu", description="Order food or drinks from the Lucky Griffon.", guild=GUILD_OBJECT)
+#MENU 1.1
+@bot.tree.command(name="menu", description="Order food or drinks from the Lucky Griffon.", guild=discord.Object(id=GUILD_ID))
 @app_commands.describe(item="What would you like to order?")
 async def menu(interaction: discord.Interaction, item: str):
     if interaction.channel.id != DISCORD_CHANNEL_ID:
         await interaction.response.send_message(
             "Quintin raises an eyebrow. 'We don’t serve out on the street, friend.'", ephemeral=True)
         return
-
     await interaction.response.defer(thinking=True)
-
     food_menu = {
         "stew": "*A bubbling cauldron of meat and vegetables, always hot, always slightly mysterious.*",
         "bread": "*Thick-sliced, fresh from the oven. Served with herbed butter and a smirk.*",
@@ -322,7 +356,6 @@ async def menu(interaction: discord.Interaction, item: str):
         "ghost grog": "*Chilled by spirits. Literally.*",
         "wyrmshot": "*A tiny vial of something green. Glows. Quintin won't tell you what's in it.*"
     }
-
     item_lower = item.lower()
     if item_lower in food_menu:
         reply = f"🍽️ Quintin nods and serves you **{item.title()}**.\n{food_menu[item_lower]}"
@@ -342,16 +375,13 @@ async def menu(interaction: discord.Interaction, item: str):
         )
     await interaction.followup.send(reply)
 
-#GOSSIP
-@bot.tree.command(name="gossip", description="Quintin shares some juicy, fresh tavern gossip.", guild=GUILD_OBJECT)
+#GOSSIP 1.1
+@bot.tree.command(name="gossip", description="Quintin shares some juicy, fresh tavern gossip.", guild=discord.Object(id=GUILD_ID))
 async def gossip(interaction: discord.Interaction):
     if interaction.channel.id != DISCORD_CHANNEL_ID:
-        await interaction.response.send_message(
-            "Quintin leans over the bar. 'Save it for the tavern, friend.'", ephemeral=True)
+        await interaction.response.send_message("Quintin leans over the bar. 'Save it for the tavern, friend.'", ephemeral=True)
         return
-
     await interaction.response.defer(thinking=True)
-
     prompt = (
         "You are Quintin, the barkeep of the Lucky Griffon in Alexandria. "
         "In a warm, whispery tone, share a rumour you've heard from your patrons. "
@@ -359,7 +389,6 @@ async def gossip(interaction: discord.Interaction):
         "including Kalteo, Alexandria, Big Tony, Zargathax, Ellette, Graxen, Qwimby, Steve Emberfoot, kyo, orlan, or any known figures or places from that world. "
         "Keep it under 2 sentences, and deliver it as if you're leaning in conspiratorially."
     )
-
     try:
         response = client.chat.completions.create(
             model="gpt-3.5-turbo",
@@ -370,14 +399,11 @@ async def gossip(interaction: discord.Interaction):
     except Exception as e:
         await interaction.followup.send(f"❌ Quintin spilled the stew instead of gossiping: `{e}`")
 
-#COMPLIMENT
-@bot.tree.command(name="compliment", description="Quintin gives someone a heartfelt (or odd) compliment.", guild=GUILD_OBJECT)
-@app_commands.describe(user="Who do you want Quintin to compliment?")
+#COMPLIMENT 1.1
+@bot.tree.command(name="compliment", description="Quintin gives someone a heartfelt (or odd) compliment.", guild=discord.Object(id=GUILD_ID))
 async def compliment(interaction: discord.Interaction, user: discord.User):
     if interaction.channel.id != DISCORD_CHANNEL_ID:
-        await interaction.response.send_message(
-            "Quintin winks. 'Compliments are only served at the bar, friend.'", ephemeral=True
-        )
+        await interaction.response.send_message("Quintin raises an eyebrow. 'Compliments are for bar regulars.'", ephemeral=True)
         return
     await interaction.response.defer(thinking=True)
     prompt = (
@@ -390,19 +416,16 @@ async def compliment(interaction: discord.Interaction, user: discord.User):
             model="gpt-3.5-turbo",
             messages=[{"role": "system", "content": prompt}]
         )
-        reply = response.choices[0].message.content.strip()
+        reply = response.choices[0].message.content
         await interaction.followup.send(f"{user.mention} {reply}")
     except Exception as e:
         await interaction.followup.send(f"❌ Quintin dropped the bottle: `{e}`")
 
-#INSULT
-@bot.tree.command(name="insult", description="Quintin roasts someone, barkeep-style.", guild=GUILD_OBJECT)
-@app_commands.describe(user="Who do you want Quintin to roast?")
+#INSULT 1.1
+@bot.tree.command(name="insult", description="Quintin roasts someone, barkeep-style.", guild=discord.Object(id=GUILD_ID))
 async def insult(interaction: discord.Interaction, user: discord.User):
     if interaction.channel.id != DISCORD_CHANNEL_ID:
-        await interaction.response.send_message(
-            "Quintin growls, 'Roasts are only served at the bar, friend.'", ephemeral=True
-        )
+        await interaction.response.send_message("Quintin narrows his eyes. 'Roasts are a tavern tradition only.'", ephemeral=True)
         return
     await interaction.response.defer(thinking=True)
     prompt = (
@@ -415,7 +438,7 @@ async def insult(interaction: discord.Interaction, user: discord.User):
             model="gpt-3.5-turbo",
             messages=[{"role": "system", "content": prompt}]
         )
-        reply = response.choices[0].message.content.strip()
+        reply = response.choices[0].message.content
         await interaction.followup.send(f"{user.mention} {reply}")
     except Exception as e:
         await interaction.followup.send(f"❌ Quintin choked on his own sass: `{e}`")
