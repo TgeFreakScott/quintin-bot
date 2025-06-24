@@ -123,12 +123,12 @@ async def on_ready():
         guild = discord.Object(id=GUILD_ID)
 
         # Clear all existing guild-specific commands
-        await bot.tree.clear_commands(guild=guild)
-        print("✅ Cleared old guild commands")
+        #await bot.tree.clear_commands(guild=guild)
+        #print("✅ Cleared old guild commands")
 
         # Optional: Clear global commands too (if you want to avoid duplicates globally)
-        await bot.tree.clear_commands()
-        print("✅ Cleared old global commands")
+        #await bot.tree.clear_commands()
+        #print("✅ Cleared old global commands")
 
         # Register commands fresh for the guild
         await bot.tree.sync(guild=guild)
