@@ -123,6 +123,10 @@ async def on_ready():
         # Clear and re-sync guild commands only
         await bot.tree.clear_commands(guild=guild)
         await bot.tree.sync(guild=guild)
+        
+        # Start the scheduler now that the event loop is running!
+        if not scheduler.running:
+            scheduler.start()
 
         print(f"🍻 Quintin is ready. Synced slash commands for guild {GUILD_ID}.")
     except Exception as e:
@@ -464,7 +468,6 @@ async def insult(interaction: discord.Interaction, user: discord.User):
     except Exception as e:
         await interaction.followup.send(f"❌ Quintin choked on his own sass: `{e}`")
 
-# 👉 Start the scheduled idle chatter job!
-scheduler.start()
+
 # 🔹 Run the bot
 bot.run(DISCORD_TOKEN)
