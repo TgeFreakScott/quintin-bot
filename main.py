@@ -117,11 +117,11 @@ async def on_ready():
         guild = discord.Object(id=GUILD_ID)
 
         # Clear global commands to prevent ghost commands
-        await bot.tree.clear_commands()
-        await bot.tree.sync()  # This syncs nothing globally
+       # await bot.tree.clear_commands()
+       # await bot.tree.sync()  # This syncs nothing globally
 
         # Clear and re-sync guild commands only
-        await bot.tree.clear_commands(guild=guild)
+        #await bot.tree.clear_commands(guild=guild)
         await bot.tree.sync(guild=guild)
         
         # Start the scheduler now that the event loop is running!
@@ -467,6 +467,12 @@ async def insult(interaction: discord.Interaction, user: discord.User):
         await interaction.followup.send(f"{user.mention} {reply}")
     except Exception as e:
         await interaction.followup.send(f"❌ Quintin choked on his own sass: `{e}`")
+
+@bot.tree.command(name="sync", description="Manually sync slash commands (admin only!)", guild=discord.Object(id=GUILD_ID))
+async def manual_sync(interaction: discord.Interaction):
+    await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
+    await interaction.response.send_message("Slash commands synced!", ephemeral=True)
+
 
 
 # 🔹 Run the bot
