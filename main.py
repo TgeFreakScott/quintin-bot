@@ -211,7 +211,7 @@ async def list_commands(interaction: discord.Interaction):
 
 from bs4 import BeautifulSoup  # Make sure this is in your imports
 
-@bot.tree.command(name="who", description="Ask Quintin about someone from the world.")
+@bot.tree.command(name="who", description="Ask Quintin about someone from the world.", guild=discord.Object(id=GUILD_ID))
 async def who(interaction: discord.Interaction, name: str):
     if interaction.channel.id != DISCORD_CHANNEL_ID:
         await interaction.response.send_message(
@@ -250,7 +250,7 @@ async def who(interaction: discord.Interaction, name: str):
         await interaction.followup.send(f"❌ Quintin dropped the ledger: `{e}`")
 
 
-@bot.tree.command(name="rumour", description="Quintin shares a whispered rumour from the tavern.")
+@bot.tree.command(name="rumour", description="Quintin shares a whispered rumour from the tavern.", guild=discord.Object(id=GUILD_ID))
 async def rumour(interaction: discord.Interaction):
     await interaction.response.defer()
 
@@ -290,7 +290,7 @@ async def rumour(interaction: discord.Interaction):
 
 import random
 
-@bot.tree.command(name="investigate", description="Ask Quintin to dig into a rumour or mystery.")
+@bot.tree.command(name="investigate", description="Ask Quintin to dig into a rumour or mystery.", guild=discord.Object(id=GUILD_ID))
 async def investigate(interaction: discord.Interaction, topic: str):
     if interaction.channel.id != DISCORD_CHANNEL_ID:
         await interaction.response.send_message(
@@ -343,7 +343,7 @@ async def investigate(interaction: discord.Interaction, topic: str):
     except Exception as e:
         await interaction.followup.send(f"Quintin groans. 'Something went wrong with my digging: `{e}`'")
 
-@bot.tree.command(name="menu", description="Order food or drinks from the Lucky Griffon.")
+@bot.tree.command(name="menu", description="Order food or drinks from the Lucky Griffon.", guild=discord.Object(id=GUILD_ID))
 @app_commands.describe(item="What would you like to order?")
 async def menu(interaction: discord.Interaction, item: str):
     if interaction.channel.id != DISCORD_CHANNEL_ID:
@@ -403,7 +403,7 @@ async def menu(interaction: discord.Interaction, item: str):
 
     await interaction.followup.send(reply)
 
-@bot.tree.command(name="gossip", description="Quintin shares some juicy, fresh tavern gossip.")
+@bot.tree.command(name="gossip", description="Quintin shares some juicy, fresh tavern gossip.", guild=discord.Object(id=GUILD_ID))
 async def gossip(interaction: discord.Interaction):
     try:
         await interaction.response.defer()
@@ -427,7 +427,7 @@ async def gossip(interaction: discord.Interaction):
     except Exception as e:
         await interaction.followup.send(f"❌ Quintin spilled the stew instead of gossiping: `{e}`")
 
-@bot.tree.command(name="compliment", description="Quintin gives someone a heartfelt (or odd) compliment.")
+@bot.tree.command(name="compliment", description="Quintin gives someone a heartfelt (or odd) compliment.", guild=discord.Object(id=GUILD_ID))
 async def compliment(interaction: discord.Interaction, user: discord.User):
     await interaction.response.defer()
     prompt = (
@@ -446,7 +446,7 @@ async def compliment(interaction: discord.Interaction, user: discord.User):
         await interaction.followup.send(f"❌ Quintin dropped the bottle: `{e}`")
 
 
-@bot.tree.command(name="insult", description="Quintin roasts someone, barkeep-style.")
+@bot.tree.command(name="insult", description="Quintin roasts someone, barkeep-style.", guild=discord.Object(id=GUILD_ID))
 async def insult(interaction: discord.Interaction, user: discord.User):
     await interaction.response.defer()
     prompt = (
@@ -464,6 +464,7 @@ async def insult(interaction: discord.Interaction, user: discord.User):
     except Exception as e:
         await interaction.followup.send(f"❌ Quintin choked on his own sass: `{e}`")
 
-
+# 👉 Start the scheduled idle chatter job!
+scheduler.start()
 # 🔹 Run the bot
 bot.run(DISCORD_TOKEN)
